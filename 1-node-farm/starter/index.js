@@ -1,5 +1,6 @@
 const fs = require('fs')
 const http = require('http')
+const url = require('url')
 
 //////////////FILES//////////////
 
@@ -30,8 +31,25 @@ const http = require('http')
 
 /////////////SERVER//////////////
 
+
+
+const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
+const dataObj = JSON.parse(data);
+
 const server = http.createServer((req,res)=>{
-    res.end("Hello from the server!!");
+    const pathName=req.url
+
+    if(pathName === '/' || pathName === '/overview'){
+        res.end('THIS IS THE OVERVIEW')
+    } else if(pathName === '/product'){
+        res.end("THIS IS THE PRODUCT")
+    } else if(pathName === '/api'){
+        res.writeHead(200, { 'Content-type': 'application/json'});
+        res.end(data)
+    }else{
+        res.writeHead(404, {'Content-type': "text/html"})
+        res.end("<h3>PAGE NOT FOUND, SORRY!</h3>")
+    }
 });
 
 server.listen(8000, "127.0.0.1", ()=>{
