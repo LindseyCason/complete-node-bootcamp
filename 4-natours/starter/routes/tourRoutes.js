@@ -8,7 +8,6 @@ const router = express.Router();
 router
   .route('/top-5-cheap')
   .get(tourController.aliasTopTours, tourController.getAllTours);
-//this is just a feature option, runs middle ware (tourController at the top for more info)
 
 router.route('/tour-stats').get(tourController.getTourStats);
 router.route('/monthly-plan/:year').get(tourController.getMonthlyPlan);
@@ -20,8 +19,8 @@ router
 
 router
   .route('/:id')
-  .get(tourController.getTourByID)
-  .patch(tourController.updateTourByID)
-  .delete(tourController.deleteTourByID);
+  .get(tourController.getTour)
+  .patch(tourController.updateTour)
+  .delete(tourController.deleteTour);
 
 module.exports = router;

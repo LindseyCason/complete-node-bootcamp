@@ -1,57 +1,72 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
+const validator = require('validator');
 
 const tourSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Tour must have a name'], //validator
-      unique: true, //not validator technically
+      required: [true, 'A tour must have a name'],
+      unique: true,
       trim: true,
-      maxlength: ['40', 'A Tour name must be <= 40 chars'],
-      minlength: ['10', 'A Tour name must be >= 10 chars']
+      maxlength: [40, 'A tour name must have less or equal then 40 characters'],
+      minlength: [10, 'A tour name must have more or equal then 10 characters'],
+      validate: [validator.isAlpha, 'Tour name must only contain characters']
     },
-    slug: {
-      type: String
-    },
+    slug: String,
     duration: {
       type: Number,
-      required: [true, 'Tour must include a duration']
+      required: [true, 'A tour must have a duration']
     },
     maxGroupSize: {
       type: Number,
-      required: [true, 'Tour must have a group size']
+      required: [true, 'A tour must have a group size']
     },
     difficulty: {
       type: String,
-      required: [true, 'Tour must have a difficulty']
-    },
-    price: {
-      type: Number,
-      required: [true, 'Tour must have a price']
+      required: [true, 'A tour must have a difficulty'],
+      enum: {
+        values: ['easy', 'medium', 'difficult'],
+        message: 'Difficulty is either: easy, medium, difficult'
+      }
     },
     ratingsAverage: {
       type: Number,
-      default: 4.5
+      default: 4.5,
+      min: [1, 'Rating must be above 1.0'],
+      max: [5, 'Rating must be below 5.0']
     },
     ratingsQuantity: {
       type: Number,
       default: 0
     },
-    priceDiscount: Number,
+    price: {
+      type: Number,
+      required: [true, 'A tour must have a price']
+    },
+    priceDiscount: {
+      type: Number,
+      validate: {
+        validator: function(val) {
+          //use regular function here so you can use the this. option. "this" doesn't work with arrow functions.
+          // this only points to current doc on NEW document creation
+          return val < this.price;
+        },
+        message: 'Discount price ({VALUE}) should be below regular price'
+      }
+    },
     summary: {
       type: String,
-      required: false,
-      trim: true
+      trim: true,
+      required: [true, 'A tour must have a description']
     },
     description: {
       type: String,
-      required: [true, 'Must include tour summary'],
       trim: true
     },
     imageCover: {
       type: String,
-      required: [true, 'A tour must have an image']
+      required: [true, 'A tour must have a cover image']
     },
     images: [String],
     createdAt: {
@@ -65,49 +80,54 @@ const tourSchema = new mongoose.Schema(
       default: false
     }
   },
-  { toJSON: { virtuals: true } },
-  { toObject: { virtuals: true } }
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
 
 tourSchema.virtual('durationWeeks').get(function() {
   return this.duration / 7;
 });
 
-tourSchema.pre('save', function(next) {
-  console.log('New Item Saved');
-  next();
-});
-
-//Query Middleware
-tourSchema.pre(/^find/, function(next) {
-  //this expression will be for all the strings that start with find.
-  //find hook makes this query and not document middleware
-  this.find({ secretTour: { $ne: true } });
-  next();
-});
-
-tourSchema.post(/^find/, function(docs, next) {
-  console.log(docs);
-  next();
-  //this block isn;t necessary
-});
-
-tourSchema.post('save', function(doc, next) {
-  console.log(doc);
-  next();
-});
-//Document Middleware: runs before .save() and .create()
+// DOCUMENT MIDDLEWARE: runs before .save() and .create()
 tourSchema.pre('save', function(next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
 
-//aggragation middleware
+// tourSchema.pre('save', function(next) {
+//   console.log('Will save document...');
+//   next();
+// });
+
+// tourSchema.post('save', function(doc, next) {
+//   console.log(doc);
+//   next();
+// });
+
+// QUERY MIDDLEWARE
+// tourSchema.pre('find', function(next) {
+tourSchema.pre(/^find/, function(next) {
+  this.find({ secretTour: { $ne: true } });
+
+  this.start = Date.now();
+  next();
+});
+
+tourSchema.post(/^find/, function(docs, next) {
+  console.log(`Query took ${Date.now() - this.start} milliseconds!`);
+  next();
+});
+
+// AGGREGATION MIDDLEWARE
 tourSchema.pre('aggregate', function(next) {
   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+
   console.log(this.pipeline());
   next();
 });
+
 const Tour = mongoose.model('Tour', tourSchema);
 
 module.exports = Tour;
