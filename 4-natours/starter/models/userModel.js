@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -33,9 +34,18 @@ const userSchema = new mongoose.Schema({
       validator: function(el) {
         return el === this.password;
       },
-      message: 'Passwords are not the same!'
+      message: 'Passwords do not match!'
     }
   }
+});
+
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  //^only run if PW was actually modified
+  this.password = await bcrypt.hash(this.password, 12);
+
+  this.passwordConfirm = undefined; //keep it from persisting in the DB
+  next();
 });
 
 const User = mongoose.model('User', userSchema);
