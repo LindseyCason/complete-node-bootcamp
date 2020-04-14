@@ -15,7 +15,8 @@ mongoose
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    autoIndex: true //fixing unique error
   })
   .then(() => {
     console.log('DB CONNECTION SUCCESS');
